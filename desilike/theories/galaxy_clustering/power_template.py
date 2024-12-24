@@ -1,7 +1,7 @@
 import re
 
 import numpy as np
-from cosmoprimo import PowerSpectrumBAOFilter, PowerSpectrumInterpolator1D
+from cosmoprimo import PowerSpectrumBAOFilter, PowerSpectrumInterpolator1D, Cosmology
 
 from desilike.jax import numpy as jnp
 from desilike.base import BaseCalculator
