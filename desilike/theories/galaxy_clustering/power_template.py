@@ -235,6 +235,7 @@ class DirectPowerSpectrumTemplate(BasePowerSpectrumTemplate):
             # cosmo_requires only used for external bindings (cobaya, cosmosis, montepython): specifies the input theory requirements
             self.cosmo_requires = {'fourier': {'sigma8_z': {'z': self.z, 'of': [('delta_cb', 'delta_cb'), ('theta_cb', 'theta_cb')]},
                                                'pk_interpolator': {'z': self.z, 'k': self.k, 'of': [('delta_cb', 'delta_cb')]}}, 'thermodynamics': {'rs_drag': None}}
+            self.cosmo.set_engine('camb')
         elif cosmo is None:
             self.cosmo = Cosmoprimo(fiducial=self.fiducial, engine=engine)
             # transfer the parameters of the template (Omega_m, logA, h, etc.) to Cosmoprimo
@@ -1381,6 +1382,7 @@ class DirectWiggleSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
             # cosmo_requires only used for external bindings (cobaya, cosmosis, montepython): specifies the input theory requirements
             self.cosmo_requires = {'fourier': {'sigma8_z': {'z': self.z, 'of': [('delta_cb', 'delta_cb'), ('theta_cb', 'theta_cb')]},
                                                'pk_interpolator': {'z': self.z, 'k': self.k, 'of': [('delta_cb', 'delta_cb')]}}, 'thermodynamics': {'rs_drag': None}}
+            self.cosmo.set_engine('camb')
         elif cosmo is None:
             self.cosmo = Cosmoprimo(fiducial=self.fiducial)
             # transfer the parameters of the template (Omega_m, logA, h, etc.) to Cosmoprimo
