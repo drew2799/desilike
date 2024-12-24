@@ -1,7 +1,7 @@
 class: Cosmoprimo
 
 init:
-  engine: class
+  engine: camb
 
 params:
   # Using Planck2O18 priors, TT,TE,EE+lowE+lensing
