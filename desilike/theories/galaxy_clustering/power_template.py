@@ -1405,3 +1405,169 @@ class DirectWiggleSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         if self.only_now:  # only used if we want to take wiggles out of our model (e.g. for BAO)
             for name in ['dd']:
                 setattr(self, 'pk_' + name, getattr(self, 'pknow_' + name))
+
+c = constants.c
+
+class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
+    """
+    Same as :class:`DirectPowerSpectrumTemplate`, i.e. parameterized in terms of base cosmological parameters,
+    but with underlying transfer function splitted into baryon and cold dark matter components with freely
+    varying proportions, given by the parameter `gamma_b`.
+
+    Parameters
+    ----------
+    k : array, default=None
+        Theory wavenumbers where to evaluate the linear power spectrum.
+
+    z : float, default=1.
+        Effective redshift.
+
+    with_now : str, default=False
+        If provided, also compute smoothed, BAO-filtered, linear power spectrum with this engine (e.g. 'wallish2018', 'peakaverage').
+
+    fiducial : str, tuple, dict, cosmoprimo.Cosmology, default='DESI'
+        Specifications for fiducial cosmology, used to compute the linear power spectrum. Either:
+
+        - str: name of fiducial cosmology in :class:`cosmoprimo.fiucial`
+        - tuple: (name of fiducial cosmology, dictionary of parameters to update)
+        - dict: dictionary of parameters
+        - :class:`cosmoprimo.Cosmology`: Cosmology instance
+
+    
+    """
+    def initialize(self, *args, cosmo=None, with_now=False, split_method='new', **kwargs):
+        
+        self.split_method = split_method
+        super(BaryonSignalSplitPowerSpectrumTemplate, self).initialize(*args, with_now=with_now, **kwargs)
+
+        self.fiducial.set_engine('camb')
+        self.cosmo_requires = {}
+        
+        # keep only derived parameters and gamma_b, others are transferred to Cosmoprimo
+        params = self.init.params.select(derived=True) + self.init.params.select(basename=['gamma_b'])
+        if is_external_cosmo(self.cosmo):
+            # cosmo_requires only used for external bindings (cobaya, cosmosis, montepython): specifies the input theory requirements
+            self.cosmo_requires = {'fourier': {'sigma8_z': {'z': self.z, 'of': [('delta_cb', 'delta_cb'), ('theta_cb', 'theta_cb')]},
+                                               'pk_interpolator': {'z': self.z, 'k': self.k, 'of': [('delta_cb', 'delta_cb')]}}, 'thermodynamics': {'rs_drag': None}}
+            self.cosmo.set_engine('camb')
+        elif cosmo is None:
+            self.cosmo = Cosmoprimo(fiducial=self.fiducial)
+            # transfer the parameters of the template (Omega_m, logA, h, etc.) to Cosmoprimo
+            self.cosmo.init.params = [param for param in self.init.params if param not in params]
+        self.init.params = params
+        # Alcock-Paczynski effect, that is known given the cosmo and fiducial
+        self.apeffect = APEffect(z=self.z, fiducial=self.fiducial, cosmo=self.cosmo, mode='geometry').runtime_info.initialize()
+        if is_external_cosmo(self.cosmo):
+            # update cosmo_requires with background quantities
+            self.cosmo_requires.update(self.apeffect.cosmo_requires)
+
+    def compute_baryon_sign_new_split(self, gamma_b):
+
+        
+        self.kh = np.logspace(-4, 0, 500)
+        #np.logspace(np.log10(1.049e-5),np.log10(10.5),500)
+
+        cosmo = self.cosmo.get().clone(z_pk=self.z, kmax_pk=10.)
+        onlybar_cosmo = cosmo.clone(Omega_b=cosmo['Omega_m'], Omega_cdm=0., kmax_pk=10.)#, m_ncdm=None)
+
+        # Standard cosmology
+        fb = cosmo['omega_b']/(cosmo['omega_b']+cosmo['omega_cdm'])
+        #fb = self.cosmo['omega_b']/(self.cosmo['omega_m'])
+        self.primord_Pk = cosmo.get_primordial().pk_k(self.kh)
+        #self.fid_Pk_interp = self.cosmo.get_fourier(engine='camb').pk_interpolator().to_1d(z=seslf.z)
+        #self.fiducial_Pk = fid_pk_interp(self.kh, self.z)
+        
+        rdrag = cosmo.get_thermodynamics()._rs_drag   #/params.h
+        tot_kh = cosmo.get_transfer().tr.get_matter_transfer_data().transfer_z('k/h', 0)
+        tot_transfer = cosmo.get_transfer().tr.get_matter_transfer_data().transfer_z('delta_nonu', 0)
+
+        # Total matter transfer function
+        self.Tm = interp1d(np.log10(self.kh), np.log10(tot_kh), tot_transfer, method='cubic2')
+
+        # Only baryon cosmology
+        onlybar_rdrag = onlybar_cosmo.get_thermodynamics()._rs_drag   #/params.h
+        onlybar_kh = onlybar_cosmo.get_transfer().tr.get_matter_transfer_data().transfer_z('k/h', 0)
+        onlybar_transfer = onlybar_cosmo.get_transfer().tr.get_matter_transfer_data().transfer_z('delta_nonu', 0)
+
+        # Baryon transfer function
+        self.alpha = onlybar_rdrag/rdrag
+        self.Tb = interp1d(np.log10(self.kh/self.alpha), np.log10(onlybar_kh), onlybar_transfer, method='cubic2')
+
+        # CDM transfer fucntion
+        self.Tc = (self.Tm-fb*self.Tb)/(1-fb)
+   
+        self.Pk = (self.primord_Pk * (gamma_b*self.Tb + (1-gamma_b)*self.Tc)**2) * (self.kh * cosmo['h'] * 2*np.pi**2)
+        #self.Pk = (self.primord_Pk * (gamma_b*self.Tb + (1-gamma_b)*self.Tc)**2) * ((self.kh*self.cosmo['h'])**4)/((self.kh*self.cosmo['h'])**3/(2*np.pi**2))
+       
+        #self.pk_dd_interpolator = PowerSpectrumInterpolator1D(self.kh, self.Pk)x
+    
+    '''def compute_baryon_sign_old_split(self, gamma_b):
+
+        
+        self.kh = np.logspace(-4, 0, 500)
+
+        camb_cosmo = self.cosmo.get().clone(z_pk=self.z, kmax_pk=10., engine='camb')
+        eh_cosmo = self.cosmo.get().clone(z_pk=self.z, kmax_pk=10., sigma8=camb_cosmo.get_fourier().sigma8_m, engine='eisenstein_hu')
+
+        # Standard cosmology
+        fb = eh_cosmo['omega_b']/(eh_cosmo['omega_b']+eh_cosmo['omega_cdm'])
+        #fb = eh_cosmo['omega_b']/eh_cosmo['omega_m']
+
+        self.primord_Pk = eh_cosmo.get_primordial().pk_k(self.kh)
+        
+        tot_kh = camb_cosmo.get_transfer().tr.get_matter_transfer_data().transfer_z('k/h', 0)
+        tot_transfer = camb_cosmo.get_transfer().tr.get_matter_transfer_data().transfer_z('delta_nonu', 0)
+        # Total matter transfer function
+        camb_Tm = interp1d(np.log10(self.kh), np.log10(tot_kh), tot_transfer/max(tot_transfer), method='cubic2')
+
+        # Zero baryon transfer function
+        eh_tr = eh_cosmo.get_transfer()
+        eh_tr.transfer_k(self.kh)
+        k = self.kh * eh_cosmo.h  # now in 1/Mpc
+        # EH eq. 10
+        q = k / (13.41 * eh_tr._engine.k_eq)
+        ks = k * eh_tr._engine.rs_drag
+
+        T_c_ln_beta = np.log(np.e + 1.8 * eh_tr._engine.beta_c * q)
+        T_c_ln_nobeta = np.log(np.e + 1.8 * q)
+        T_c_C_alpha = 14.2 / eh_tr._engine.alpha_c + 386. / (1 + 69.9 * q ** 1.08)
+        T_c_C_noalpha = 14.2 + 386. / (1 + 69.9 * q ** 1.08)
+
+        # EH eq. 18
+        T_c_f = 1. / (1. + (ks / 5.4) ** 4)
+
+        def T0(a, b):
+            return a / (a + b * q**2)
+
+        self.Tc = T_c_f * T0(T_c_ln_beta, T_c_C_noalpha) + (1 - T_c_f) * T0(T_c_ln_beta, T_c_C_alpha)
+
+        # Baryon transfer function
+        self.Tb = (camb_Tm - (1-fb)*self.Tc)/fb
+
+        # Reconstructed total transfer function
+        self.Tm = gamma_b*self.Tb + (1-gamma_b)*self.Tc
+
+        ba = eh_cosmo.get_background()
+        potential_to_density = (3. * ba.Omega0_m * 100**2 / (2. * (c / 1e3)**2 * self.kh**2)) ** (-2)
+        curvature_to_potential = 9. / 25. * 2. * np.pi**2 / self.kh**3 / (eh_cosmo.h**3)
+   
+        self.Pk = (self.Tm**2) * potential_to_density * curvature_to_potential * self.primord_Pk * (ba.growth_factor(self.z, znorm=0.)**2)'''
+
+    def calculate(self, gamma_b=0.15712579897450307):
+        # Compute the power spectrum for the current cosmo
+        BasePowerSpectrumExtractor._set_base(self, with_now=self.with_now)
+        # Computing the transfer calculation for barion-cdm signals splitting
+        #self.onlybar_cosmo = self.cosmo.get().clone(Omega_b=self.cosmo['Omega_m'], Omega_cdm=0.)#, m_ncdm=None)
+        if self.split_method=='new':
+            self.compute_baryon_sign_new_split(gamma_b)
+        '''else:
+            self.compute_baryon_sign_old_split(gamma_b)'''
+
+        self.pk_dd_interpolator = PowerSpectrumInterpolator1D(self.kh, self.Pk)
+        
+        self.pk_dd = self.pk_dd_interpolator(self.k)
+        if self.with_now:
+            self.pknow_dd = self.pknow_dd_interpolator(self.k)
+        if self.only_now:  # only used if we want to take wiggles out of our model (e.g. for BAO)
+            for name in ['dd_interpolator', 'dd']:
+                setattr(self, 'pk_' + name, getattr(self, 'pknow_' + name))
