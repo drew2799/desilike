@@ -225,7 +225,7 @@ class DirectPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         - :class:`cosmoprimo.Cosmology`: Cosmology instance
     """
     def initialize(self, *args, cosmo=None, **kwargs):
-        engine = kwargs.pop('engine', 'class')
+        engine = kwargs.pop('engine', 'camb')
         super(DirectPowerSpectrumTemplate, self).initialize(*args, apmode='geometry', **kwargs)
         self.cosmo_requires = {}
         self.cosmo = cosmo
@@ -436,7 +436,7 @@ class BAOPhaseShiftExtractor(BAOExtractor):
 def _interp(k, k1, pk1):
     from desilike.jax import numpy as jnp
     from desilike.jax import interp1d
-    return interp1d(jnp.log10(k), jnp.log10(k1), pk1, method='cubic')
+    return interp1d(jnp.log10(k), jnp.log10(k1), pk1, method='cubic2')
 
 
 class BAOPhaseShiftPowerSpectrumTemplate(BAOPowerSpectrumTemplate):
@@ -1482,7 +1482,7 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         tot_transfer = cosmo.get_transfer().tr.get_matter_transfer_data().transfer_z('delta_nonu', 0)
 
         # Total matter transfer function
-        self.Tm = interp1d(np.log10(self.kh), np.log10(tot_kh), tot_transfer, method='cubic2')
+        self.Tm = _interp(self.kh, tot_kh, tot_transfer)
 
         # Only baryon cosmology
         onlybar_rdrag = onlybar_cosmo.get_thermodynamics()._rs_drag   #/params.h
@@ -1491,7 +1491,7 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
 
         # Baryon transfer function
         self.alpha = onlybar_rdrag/rdrag
-        self.Tb = interp1d(np.log10(self.kh/self.alpha), np.log10(onlybar_kh), onlybar_transfer, method='cubic2')
+        self.Tb = _interp(self.kh/self.alpha, onlybar_kh, onlybar_transfer)
 
         # CDM transfer fucntion
         self.Tc = (self.Tm-fb*self.Tb)/(1-fb)
@@ -1501,7 +1501,7 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
        
         #self.pk_dd_interpolator = PowerSpectrumInterpolator1D(self.kh, self.Pk)x
     
-    '''def compute_baryon_sign_old_split(self, gamma_b):
+    def compute_baryon_sign_old_split(self, gamma_b):
 
         
         self.kh = np.logspace(-4, 0, 500)
@@ -1511,26 +1511,27 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
 
         # Standard cosmology
         fb = eh_cosmo['omega_b']/(eh_cosmo['omega_b']+eh_cosmo['omega_cdm'])
-        #fb = eh_cosmo['omega_b']/eh_cosmo['omega_m']
 
-        self.primord_Pk = eh_cosmo.get_primordial().pk_k(self.kh)
+        self.primord_Pk = camb_cosmo.get_primordial().pk_k(self.kh)
         
         tot_kh = camb_cosmo.get_transfer().tr.get_matter_transfer_data().transfer_z('k/h', 0)
         tot_transfer = camb_cosmo.get_transfer().tr.get_matter_transfer_data().transfer_z('delta_nonu', 0)
         # Total matter transfer function
-        camb_Tm = interp1d(np.log10(self.kh), np.log10(tot_kh), tot_transfer/max(tot_transfer), method='cubic2')
+        camb_Tm = _interp(self.kh, tot_kh, tot_transfer)
+        norm_Tm = max(camb_Tm)
 
         # Zero baryon transfer function
         eh_tr = eh_cosmo.get_transfer()
         eh_tr.transfer_k(self.kh)
-        k = self.kh * eh_cosmo.h  # now in 1/Mpc
-        # EH eq. 10
-        q = k / (13.41 * eh_tr._engine.k_eq)
-        ks = k * eh_tr._engine.rs_drag
+        
+        k = eh_tr._np.asarray(self.kh)*eh_tr._h
 
-        T_c_ln_beta = np.log(np.e + 1.8 * eh_tr._engine.beta_c * q)
-        T_c_ln_nobeta = np.log(np.e + 1.8 * q)
-        T_c_C_alpha = 14.2 / eh_tr._engine.alpha_c + 386. / (1 + 69.9 * q ** 1.08)
+        q = k / (13.41 * eh_tr._k_eq)
+        ks = k * eh_tr._rs_drag
+
+        T_c_ln_beta = eh_tr._np.log(np.e + 1.8 * eh_tr._beta_c * q)
+        T_c_ln_nobeta = eh_tr._np.log(np.e + 1.8 * q)
+        T_c_C_alpha = 14.2 / eh_tr._alpha_c + 386. / (1 + 69.9 * q ** 1.08)
         T_c_C_noalpha = 14.2 + 386. / (1 + 69.9 * q ** 1.08)
 
         # EH eq. 18
@@ -1542,16 +1543,19 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         self.Tc = T_c_f * T0(T_c_ln_beta, T_c_C_noalpha) + (1 - T_c_f) * T0(T_c_ln_beta, T_c_C_alpha)
 
         # Baryon transfer function
-        self.Tb = (camb_Tm - (1-fb)*self.Tc)/fb
+        self.Tb = (camb_Tm/norm_Tm - (1-fb)*self.Tc)/fb
 
         # Reconstructed total transfer function
-        self.Tm = gamma_b*self.Tb + (1-gamma_b)*self.Tc
+        self.Tm = norm_Tm*(gamma_b*self.Tb + (1-gamma_b)*self.Tc)
 
-        ba = eh_cosmo.get_background()
+        '''ba = eh_cosmo.get_background()
         potential_to_density = (3. * ba.Omega0_m * 100**2 / (2. * (c / 1e3)**2 * self.kh**2)) ** (-2)
-        curvature_to_potential = 9. / 25. * 2. * np.pi**2 / self.kh**3 / (eh_cosmo.h**3)
+        curvature_to_potential = 9. / 25. * 2. * np.pi**2 / self.kh**3 / ba.h ** 3
    
         self.Pk = (self.Tm**2) * potential_to_density * curvature_to_potential * self.primord_Pk * (ba.growth_factor(self.z, znorm=0.)**2)'''
+        self.Pk = self.primord_Pk * (self.Tm**2) * (self.kh * camb_cosmo['h'] * 2*np.pi**2)
+
+
 
     def calculate(self, gamma_b=0.15712579897450307):
         # Compute the power spectrum for the current cosmo
@@ -1560,8 +1564,8 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         #self.onlybar_cosmo = self.cosmo.get().clone(Omega_b=self.cosmo['Omega_m'], Omega_cdm=0.)#, m_ncdm=None)
         if self.split_method=='new':
             self.compute_baryon_sign_new_split(gamma_b)
-        '''else:
-            self.compute_baryon_sign_old_split(gamma_b)'''
+        else:
+            self.compute_baryon_sign_old_split(gamma_b)
 
         self.pk_dd_interpolator = PowerSpectrumInterpolator1D(self.kh, self.Pk)
         
