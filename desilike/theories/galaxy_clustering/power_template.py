@@ -1435,7 +1435,7 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
 
     
     """
-    def initialize(self, *args, cosmo=None, with_now=False, split_method='new', **kwargs):
+    def initialize(self, *args, cosmo=None, with_now=False, split_method='new1', **kwargs):
         
         self.split_method = split_method
         super(BaryonSignalSplitPowerSpectrumTemplate, self).initialize(*args, with_now=with_now, **kwargs)
@@ -1461,21 +1461,18 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
             # update cosmo_requires with background quantities
             self.cosmo_requires.update(self.apeffect.cosmo_requires)
 
-    def compute_baryon_sign_new_split(self, gamma_b):
+    def compute_baryon_sign_new_split1(self, gamma_b):
 
         
         self.kh = np.logspace(-4, 0, 500)
-        #np.logspace(np.log10(1.049e-5),np.log10(10.5),500)
 
         cosmo = self.cosmo.get().clone(z_pk=self.z, kmax_pk=10.)
-        onlybar_cosmo = cosmo.clone(Omega_b=cosmo['Omega_m'], Omega_cdm=0., kmax_pk=10.)#, m_ncdm=None)
+        onlybar_cosmo = cosmo.clone(Omega_b=cosmo['Omega_m'], Omega_cdm=0., kmax_pk=10.)
 
         # Standard cosmology
-        fb = cosmo['omega_b']/(cosmo['omega_b']+cosmo['omega_cdm'])
-        #fb = self.cosmo['omega_b']/(self.cosmo['omega_m'])
+        #fb = cosmo['omega_b']/(cosmo['omega_b']+cosmo['omega_cdm'])
+        fb = cosmo['omega_b']/(cosmo['Omega_m']*(cosmo['h']**2))
         self.primord_Pk = cosmo.get_primordial().pk_k(self.kh)
-        #self.fid_Pk_interp = self.cosmo.get_fourier(engine='camb').pk_interpolator().to_1d(z=seslf.z)
-        #self.fiducial_Pk = fid_pk_interp(self.kh, self.z)
         
         rdrag = cosmo.get_thermodynamics()._rs_drag   #/params.h
         tot_kh = cosmo.get_transfer().tr.get_matter_transfer_data().transfer_z('k/h', 0)
@@ -1497,20 +1494,48 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         self.Tc = (self.Tm-fb*self.Tb)/(1-fb)
    
         self.Pk = (self.primord_Pk * (gamma_b*self.Tb + (1-gamma_b)*self.Tc)**2) * (self.kh * cosmo['h'] * 2*np.pi**2)
-        #self.Pk = (self.primord_Pk * (gamma_b*self.Tb + (1-gamma_b)*self.Tc)**2) * ((self.kh*self.cosmo['h'])**4)/((self.kh*self.cosmo['h'])**3/(2*np.pi**2))
-       
-        #self.pk_dd_interpolator = PowerSpectrumInterpolator1D(self.kh, self.Pk)x
+
+    def compute_baryon_sign_new_split2(self, gamma_b):
+
+        
+        self.kh = np.logspace(-4, 0, 500)
+
+        cosmo = self.cosmo.get().clone(z_pk=self.z, kmax_pk=10.)
+        nobar_cosmo = cosmo.clone(Omega_b=0.015*cosmo['Omega_m'], Omega_m=cosmo['Omega_m'], kmax_pk=10.)
+
+        # Standard cosmology
+        #fb = cosmo['omega_b']/(cosmo['omega_b']+cosmo['omega_cdm'])
+        fb = cosmo['omega_b']/(cosmo['Omega_m']*(cosmo['h']**2))
+        self.primord_Pk = cosmo.get_primordial().pk_k(self.kh)
+        
+        tot_kh = cosmo.get_transfer().tr.get_matter_transfer_data().transfer_z('k/h', 0)
+        tot_transfer = cosmo.get_transfer().tr.get_matter_transfer_data().transfer_z('delta_nonu', 0)
+
+        # Total matter transfer function
+        self.Tm = _interp(self.kh, tot_kh, tot_transfer)
+
+        # No baryon cosmology
+        nobar_kh = nobar_cosmo.get_transfer().tr.get_matter_transfer_data().transfer_z('k/h', 0)
+        nobar_transfer = nobar_cosmo.get_transfer().tr.get_matter_transfer_data().transfer_z('delta_nonu', 0)
+
+        # CDM transfer function
+        self.Tc = _interp(self.kh, nobar_kh, nobar_transfer)
+
+        # CDM transfer fucntion
+        self.Tb = (self.Tm-(1-fb)*self.Tc)/fb
+   
+        self.Pk = (self.primord_Pk * (gamma_b*self.Tb + (1-gamma_b)*self.Tc)**2) * (self.kh * cosmo['h'] * 2*np.pi**2)
     
     def compute_baryon_sign_old_split(self, gamma_b):
 
-        
         self.kh = np.logspace(-4, 0, 500)
 
         camb_cosmo = self.cosmo.get().clone(z_pk=self.z, kmax_pk=10., engine='camb')
         eh_cosmo = self.cosmo.get().clone(z_pk=self.z, kmax_pk=10., sigma8=camb_cosmo.get_fourier().sigma8_m, engine='eisenstein_hu')
 
         # Standard cosmology
-        fb = eh_cosmo['omega_b']/(eh_cosmo['omega_b']+eh_cosmo['omega_cdm'])
+        #fb = eh_cosmo['omega_b']/(eh_cosmo['omega_b']+eh_cosmo['omega_cdm'])
+        fb = eh_cosmo['omega_b']/(eh_cosmo['Omega_m']*(eh_cosmo['h']**2))
 
         self.primord_Pk = camb_cosmo.get_primordial().pk_k(self.kh)
         
@@ -1548,11 +1573,6 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         # Reconstructed total transfer function
         self.Tm = norm_Tm*(gamma_b*self.Tb + (1-gamma_b)*self.Tc)
 
-        '''ba = eh_cosmo.get_background()
-        potential_to_density = (3. * ba.Omega0_m * 100**2 / (2. * (c / 1e3)**2 * self.kh**2)) ** (-2)
-        curvature_to_potential = 9. / 25. * 2. * np.pi**2 / self.kh**3 / ba.h ** 3
-   
-        self.Pk = (self.Tm**2) * potential_to_density * curvature_to_potential * self.primord_Pk * (ba.growth_factor(self.z, znorm=0.)**2)'''
         self.Pk = self.primord_Pk * (self.Tm**2) * (self.kh * camb_cosmo['h'] * 2*np.pi**2)
 
 
@@ -1562,8 +1582,10 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         BasePowerSpectrumExtractor._set_base(self, with_now=self.with_now)
         # Computing the transfer calculation for barion-cdm signals splitting
         #self.onlybar_cosmo = self.cosmo.get().clone(Omega_b=self.cosmo['Omega_m'], Omega_cdm=0.)#, m_ncdm=None)
-        if self.split_method=='new':
-            self.compute_baryon_sign_new_split(gamma_b)
+        if self.split_method=='new1':
+            self.compute_baryon_sign_new_split1(gamma_b)
+        elif self.split_method=='new2':
+            self.compute_baryon_sign_new_split2(gamma_b)
         else:
             self.compute_baryon_sign_old_split(gamma_b)
 
@@ -1575,3 +1597,4 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         if self.only_now:  # only used if we want to take wiggles out of our model (e.g. for BAO)
             for name in ['dd_interpolator', 'dd']:
                 setattr(self, 'pk_' + name, getattr(self, 'pknow_' + name))
+
