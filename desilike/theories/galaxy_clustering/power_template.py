@@ -1,14 +1,16 @@
 import re
 
 import numpy as np
-from cosmoprimo import PowerSpectrumBAOFilter, PowerSpectrumInterpolator1D
-
+from cosmoprimo import PowerSpectrumBAOFilter, PowerSpectrumInterpolator1D, PowerSpectrumInterpolator2D, Cosmology
+from jax.tree_util import Partial
 from desilike.jax import numpy as jnp
 from desilike.base import BaseCalculator
 from desilike.cosmo import is_external_cosmo
 from desilike.parameter import ParameterCollection
 from desilike.theories.primordial_cosmology import get_cosmo, Cosmoprimo, Cosmology, constants
 from .base import APEffect
+from scipy.interpolate import RectBivariateSpline
+import camb
 
 
 _kw_interp = dict(extrap_kmin=1e-7, extrap_kmax=1e2)
