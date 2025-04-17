@@ -227,7 +227,7 @@ class DirectPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         - :class:`cosmoprimo.Cosmology`: Cosmology instance
     """
     def initialize(self, *args, cosmo=None, **kwargs):
-        engine = kwargs.pop('engine', 'class')
+        engine = kwargs.pop('engine', 'camb')
         super(DirectPowerSpectrumTemplate, self).initialize(*args, apmode='geometry', **kwargs)
         self.cosmo_requires = {}
         self.cosmo = cosmo
