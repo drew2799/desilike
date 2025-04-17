@@ -1541,21 +1541,14 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
 
         # Total CAMB matter transfer function
         self.Tm, self.Tm_interp = compute_camb_transfer_table_interp(cosmo, self.kh)
-        # Redshift 0 transfer function, normalized such that k->0 Tm->1 (as in EH)
-        norm_Tm_z_0 = self.Tm[:,0]/self.Tm[0,0]
-        # Re-normalization for transfer at any redhsift to restore CAMB normal value when k->0
-        #norm_Tm_k = (self.Tm/(norm_Tm_z_0)[:, np.newaxis])  #1
-        norm_Tm = self.Tm[0,:]
         # CDM EH transfer function
         self.Tc, _, _, = compute_EH_transfers(cosmo, self.kh, self.z)
         # Baryon transfer function
-        #self.Tb = (norm_Tm_z_0-(1-fb)*self.Tc)/fb
         self.Tb = (self.Tm-(1-fb)*self.Tc[:,np.newaxis])/fb
         # Reconstructed total transfer function
         #self.recon_Tm = norm_Tm_k*(gamma_b*self.Tb+(1-gamma_b)*self.Tc)[:, np.newaxis]  #1
         #self.recon_Tm = (gamma_b*self.Tb+(1-gamma_b)*self.Tc)[:, np.newaxis] * norm_Tm
         self.recon_Tm = (gamma_b*self.Tb+(1-gamma_b)*self.Tc[:, np.newaxis])
-
 
         init_Pk = self.primord_Pk * self.kh * cosmo['h'] * 2*np.pi**2
         self.Pk = init_Pk[:, np.newaxis] * (self.recon_Tm)**2
