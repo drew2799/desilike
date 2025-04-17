@@ -1536,7 +1536,7 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
     
         self.kh = np.logspace(np.log10(5e-5), 0, 500)
         cosmo = self.cosmo.clone(kmax_pk=10.)
-        fb = cosmo['omega_b']/(cosmo['Omega_m']*(cosmo['h']**2))
+        fb = cosmo['omega_b']/(cosmo['omega_b'] + cosmo['omega_cdm'])
         self.primord_Pk = cosmo.get_primordial().pk_k(self.kh)
 
         # Total CAMB matter transfer function
