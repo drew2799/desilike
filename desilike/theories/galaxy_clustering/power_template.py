@@ -1580,6 +1580,7 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         self.pk_dd = self.pk_dd_interpolator(self.k)
         
         if self.with_now:
+            # Currently not working for 'gamma_b'=1., and in general it has natural difficulties for any 'gamma_b'>0.5
             now_engine = 'peakaverage'  # default or 'wallish2018'
             self.filter = PowerSpectrumBAOFilter(self.pk_dd_interpolator, engine=now_engine, cosmo=self.cosmo, cosmo_fid=self.fiducial)
             self.pknow_dd_interpolator = self.filter.smooth_pk_interpolator()
