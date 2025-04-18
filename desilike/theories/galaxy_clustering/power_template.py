@@ -1578,9 +1578,13 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
             raise ValueError(f"The 'split_method' argument is not valid: {self.split_method}. 'mod_camb' or 'old' expected.")
         
         self.pk_dd = self.pk_dd_interpolator(self.k)
+        
         if self.with_now:
-            # Remember, the no-wiggle interpolator is not computed on the actual new template, but jost on the fiducial cosmo power spectrum
+            now_engine = 'peakaverage'  # default or 'wallish2018'
+            self.filter = PowerSpectrumBAOFilter(self.pk_dd_interpolator, engine=now_engine, cosmo=self.cosmo, cosmo_fid=self.fiducial)
+            self.pknow_dd_interpolator = self.filter.smooth_pk_interpolator()
             self.pknow_dd = self.pknow_dd_interpolator(self.k)
+            
         if self.only_now:  # only used if we want to take wiggles out of our model (e.g. for BAO)
             for name in ['dd_interpolator', 'dd']:
                 setattr(self, 'pk_' + name, getattr(self, 'pknow_' + name))
