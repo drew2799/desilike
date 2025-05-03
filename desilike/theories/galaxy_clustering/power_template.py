@@ -1675,7 +1675,7 @@ class DirectEDEPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         EDE_engine.set(todo_params|cosmo_params|ede_params)
         EDE_engine.compute()
 
-        self.kh = np.logspace(np.log10(5e-5), 100, 500)
+        self.kh = np.logspace(np.log10(5e-5), 2, 500)
         self.kh_no_h = self.kh * self.cosmo['h']
 
         EDE_Pk_k_z = np.zeros((len(self.kh), len(self.cosmo['z_pk'])))
