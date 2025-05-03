@@ -1653,9 +1653,9 @@ class DirectEDEPowerSpectrumTemplate(BasePowerSpectrumTemplate):
                 'N_ur': cosmo['N_ur'],
                 'P_k_max_h/Mpc': 100, #cosmo['kmax_pk'],
                 'z_max_pk': max(cosmo['z_pk'])}
-        ede_params = {'fEDE': 0.122,
-              'log10z_c': 3.562,
-              'thetai_scf': 2.83, 
+        ede_params = {'fEDE': fEDE,
+              'log10z_c': log10z_c,
+              'thetai_scf': thetai_scf, 
               'Omega_Lambda':0.0, 
               'Omega_fld':0, 
               'Omega_scf':-1, 
