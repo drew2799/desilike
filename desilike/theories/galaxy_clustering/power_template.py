@@ -1589,3 +1589,99 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         if self.only_now:  # only used if we want to take wiggles out of our model (e.g. for BAO)
             for name in ['dd_interpolator', 'dd']:
                 setattr(self, 'pk_' + name, getattr(self, 'pknow_' + name))
+
+class DirectEDEPowerSpectrumTemplate(BasePowerSpectrumTemplate):
+    """
+    Direct power spectrum template, i.e. parameterized in terms of base cosmological parameters, 
+    for EDE model with CLASS-EDE.
+
+    Parameters
+    ----------
+    k : array, default=None
+        Theory wavenumbers where to evaluate the linear power spectrum.
+
+    z : float, default=1.
+        Effective redshift.
+
+    with_now : str, default=False
+        If provided, also compute smoothed, BAO-filtered, linear power spectrum with this engine (e.g. 'wallish2018', 'peakaverage').
+
+    fiducial : str, tuple, dict, cosmoprimo.Cosmology, default='DESI'
+        Specifications for fiducial cosmology, used to compute the linear power spectrum. Either:
+
+        - str: name of fiducial cosmology in :class:`cosmoprimo.fiucial`
+        - tuple: (name of fiducial cosmology, dictionary of parameters to update)
+        - dict: dictionary of parameters
+        - :class:`cosmoprimo.Cosmology`: Cosmology instance
+    """
+    def initialize(self, *args, cosmo=None, **kwargs):
+        engine = kwargs.pop('engine', 'camb')
+        super(DirectPowerSpectrumTemplate, self).initialize(*args, apmode='geometry', **kwargs)
+        self.cosmo_requires = {}
+        self.cosmo = cosmo
+        # keep only derived parameters, others are transferred to Cosmoprimo
+        params = self.init.params.select(derived=True)
+        if is_external_cosmo(self.cosmo):
+            # cosmo_requires only used for external bindings (cobaya, cosmosis, montepython): specifies the input theory requirements
+            self.cosmo_requires = {'fourier': {'sigma8_z': {'z': self.z, 'of': [('delta_cb', 'delta_cb'), ('theta_cb', 'theta_cb')]},
+                                               'pk_interpolator': {'z': self.z, 'k': self.k, 'of': [('delta_cb', 'delta_cb')]}}, 'thermodynamics': {'rs_drag': None}}
+        elif cosmo is None:
+            self.cosmo = Cosmoprimo(fiducial=self.fiducial, engine=engine)
+            # transfer the parameters of the template (Omega_m, logA, h, etc.) to Cosmoprimo
+            self.cosmo.init.params = [param for param in self.params if param not in params]
+        self.init.params = params
+        # Alcock-Paczynski effect, that is known given the cosmo and fiducial
+        self.apeffect.init.update(cosmo=self.cosmo)
+        if is_external_cosmo(self.cosmo):
+            # update cosmo_requires with background quantities
+            self.cosmo_requires.update(self.apeffect.cosmo_requires)
+
+    def calculate(self, fEDE, log10z_c, thetai_scf):
+
+        # this should be a local installation of class-ede, not class wrapper from cosmoprimo
+        from classy import Class
+
+        todo_params = {'output':'mPk'}
+        cosmo_params = {'h': cosmo['h'],
+                'omega_b': cosmo['omega_b'],
+                'omega_cdm': cosmo['omega_cdm'],
+                'A_s': cosmo['A_s'],
+                'n_s': cosmo['n_s'],
+                'tau_reio': cosmo['tau_reio'],
+                'm_ncdm': cosmo['m_ncdm'][0],
+                'N_ncdm': cosmo['N_ncdm'],
+                'N_ur': cosmo['N_ur'],
+                'P_k_max_h/Mpc': 100, #cosmo['kmax_pk'],
+                'z_max_pk': max(cosmo['z_pk'])}
+        ede_params = {'fEDE': 0.122,
+              'log10z_c': 3.562,
+              'thetai_scf': 2.83, 
+              'Omega_Lambda':0.0, 
+              'Omega_fld':0, 
+              'Omega_scf':-1, 
+              'n_scf':3, 
+              'CC_scf':1, 
+              'scf_parameters':'1, 1, 1, 1, 1, 0.0', 
+              'scf_tuning_index':3, 
+              'attractor_ic_scf':'no'}
+        
+        EDE_engine = Class()
+        EDE_engine.set(todo_params|cosmo_params|ede_params)
+        EDE_engine.compute()
+
+        self.kh = np.logspace(np.log10(5e-5), 100, 500)
+
+        EDE_Pk_k_z = np.zeros(len(self.kh), len(self.cosmo['z_pk']))
+        for i,z in enumerate(self.cosmo['z_pk']):
+            EDE_Pk_k_z[:,i] = [EDE_engine.h()**3*EDE_engine.pk(self.kh[i], z) for i in range(len(self.kh))]
+        self.pk_dd_interpolator = PowerSpectrumInterpolator2D(self.kh, self.cosmo['z_pk'], self.Pk).to_1d(z=self.z)
+        self.pk_dd = self.pk_dd_interpolator(self.k)
+
+        if self.with_now:
+            now_engine = 'peakaverage'  # default or 'wallish2018'
+            self.filter = PowerSpectrumBAOFilter(self.pk_dd_interpolator, engine=now_engine, cosmo=self.cosmo, cosmo_fid=self.fiducial)
+            self.pknow_dd_interpolator = self.filter.smooth_pk_interpolator()
+            self.pknow_dd = self.pknow_dd_interpolator(self.k)
+        if self.only_now:  # only used if we want to take wiggles out of our model (e.g. for BAO)
+            for name in ['dd_interpolator', 'dd']:
+                setattr(self, 'pk_' + name, getattr(self, 'pknow_' + name))
