@@ -1678,9 +1678,9 @@ class DirectEDEPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         self.kh = np.logspace(np.log10(5e-5), 2, 500)
         self.kh_no_h = self.kh * self.cosmo['h']
 
-        EDE_Pk_k_z = np.zeros((len(self.kh), len(self.cosmo['z_pk'])))
+        self.Pk = np.zeros((len(self.kh), len(self.cosmo['z_pk'])))
         for i,z in enumerate(self.cosmo['z_pk']):
-            EDE_Pk_k_z[:,i] = [EDE_engine.h()**3*EDE_engine.pk(self.kh_no_h[i], z) for i in range(len(self.kh_no_h))]
+            self.Pk[:,i] = [EDE_engine.h()**3*EDE_engine.pk(self.kh_no_h[i], z) for i in range(len(self.kh_no_h))]
         self.pk_dd_interpolator = PowerSpectrumInterpolator2D(self.kh, self.cosmo['z_pk'], self.Pk).to_1d(z=self.z)
         self.pk_dd = self.pk_dd_interpolator(self.k)
 
