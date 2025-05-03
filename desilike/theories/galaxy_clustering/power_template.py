@@ -1640,7 +1640,7 @@ class DirectEDEPowerSpectrumTemplate(BasePowerSpectrumTemplate):
             # update cosmo_requires with background quantities
             self.cosmo_requires.update(self.apeffect.cosmo_requires)
 
-    def calculate(self, fEDE, log10z_c, thetai_scf):
+    def calculate(self, fEDE=0, log10z_c=0, thetai_scf=0):
 
         # this should be a local installation of class-ede, not class wrapper from cosmoprimo
         from classy import Class
