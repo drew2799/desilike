@@ -1642,6 +1642,8 @@ class DirectEDEPowerSpectrumTemplate(BasePowerSpectrumTemplate):
 
     def calculate(self, fEDE=0, log10z_c=0, thetai_scf=0):
 
+        BasePowerSpectrumExtractor._set_base(self, with_now=self.with_now)
+
         # this should be a local installation of class-ede, not class wrapper from cosmoprimo
         from classy import Class
 

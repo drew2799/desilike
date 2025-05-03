@@ -7,15 +7,6 @@ params:
 class: DirectPowerSpectrumTemplate
 
 params:
-
-  fEDE:
-    prior:
-      limits: [0, 1]
-    latex: f_\mathrm{EDE}
-  log10z_c:
-    latex: \log{z_c}
-  thetai_scf:
-    latex: \theta_{i,\mathrm{sfc}}
   # Using Planck priors
   h:
     prior:
@@ -132,6 +123,14 @@ params:
 class: DirectEDEPowerSpectrumTemplate
 
 params:
+  fEDE:
+    prior:
+      limits: [0, 1]
+    latex: f_\mathrm{EDE}
+  log10z_c:
+    latex: \log{z_c}
+  thetai_scf:
+    latex: \theta_{i,\mathrm{sfc}}
   # Using Planck priors
   h:
     prior:
