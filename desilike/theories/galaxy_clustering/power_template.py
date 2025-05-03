@@ -1614,7 +1614,7 @@ class DirectEDEPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         - dict: dictionary of parameters
         - :class:`cosmoprimo.Cosmology`: Cosmology instance
     """
-    def initialize(self, *args, cosmo=None, **kwargs):
+    def initialize(self, *args, cosmo=None, with_now=False, **kwargs):
 
         super(DirectEDEPowerSpectrumTemplate, self).initialize(*args, with_now=with_now, **kwargs)
 
