@@ -1648,17 +1648,17 @@ class DirectEDEPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         from classy import Class
 
         todo_params = {'output':'mPk'}
-        cosmo_params = {'h': cosmo['h'],
-                'omega_b': cosmo['omega_b'],
-                'omega_cdm': cosmo['omega_cdm'],
-                'A_s': cosmo['A_s'],
-                'n_s': cosmo['n_s'],
-                'tau_reio': cosmo['tau_reio'],
-                'm_ncdm': cosmo['m_ncdm'][0],
-                'N_ncdm': cosmo['N_ncdm'],
-                'N_ur': cosmo['N_ur'],
+        cosmo_params = {'h': self.cosmo['h'],
+                'omega_b': self.cosmo['omega_b'],
+                'omega_cdm': self.cosmo['omega_cdm'],
+                'A_s': self.cosmo['A_s'],
+                'n_s': self.cosmo['n_s'],
+                'tau_reio': self.cosmo['tau_reio'],
+                'm_ncdm': self.cosmo['m_ncdm'][0],
+                'N_ncdm': self.cosmo['N_ncdm'],
+                'N_ur': self.cosmo['N_ur'],
                 'P_k_max_h/Mpc': 100, #cosmo['kmax_pk'],
-                'z_max_pk': max(cosmo['z_pk'])}
+                'z_max_pk': max(self.cosmo['z_pk'])}
         ede_params = {'fEDE': fEDE,
               'log10z_c': log10z_c,
               'thetai_scf': thetai_scf, 
