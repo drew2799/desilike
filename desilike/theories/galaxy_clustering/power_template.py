@@ -1615,23 +1615,27 @@ class DirectEDEPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         - :class:`cosmoprimo.Cosmology`: Cosmology instance
     """
     def initialize(self, *args, cosmo=None, **kwargs):
-        engine = kwargs.pop('engine', 'camb')
-        super(DirectPowerSpectrumTemplate, self).initialize(*args, apmode='geometry', **kwargs)
+
+        super(DirectEDEPowerSpectrumTemplate, self).initialize(*args, with_now=with_now, **kwargs)
+
+        self.fiducial.set_engine('camb')
         self.cosmo_requires = {}
         self.cosmo = cosmo
-        # keep only derived parameters, others are transferred to Cosmoprimo
-        params = self.init.params.select(derived=True)
+        
+        # keep only derived parameters and gamma_b, others are transferred to Cosmoprimo
+        params = self.init.params.select(derived=True) + self.init.params.select(basename=['fEDE', 'log10z_c', 'thetai_scf'])
         if is_external_cosmo(self.cosmo):
             # cosmo_requires only used for external bindings (cobaya, cosmosis, montepython): specifies the input theory requirements
             self.cosmo_requires = {'fourier': {'sigma8_z': {'z': self.z, 'of': [('delta_cb', 'delta_cb'), ('theta_cb', 'theta_cb')]},
                                                'pk_interpolator': {'z': self.z, 'k': self.k, 'of': [('delta_cb', 'delta_cb')]}}, 'thermodynamics': {'rs_drag': None}}
+            #self.cosmo.set_engine('camb')
         elif cosmo is None:
-            self.cosmo = Cosmoprimo(fiducial=self.fiducial, engine=engine)
+            self.cosmo = Cosmoprimo(fiducial=self.fiducial)
             # transfer the parameters of the template (Omega_m, logA, h, etc.) to Cosmoprimo
-            self.cosmo.init.params = [param for param in self.params if param not in params]
+            self.cosmo.init.params = [param for param in self.init.params if param not in params]
         self.init.params = params
         # Alcock-Paczynski effect, that is known given the cosmo and fiducial
-        self.apeffect.init.update(cosmo=self.cosmo)
+        self.apeffect = APEffect(z=self.z, fiducial=self.fiducial, cosmo=self.cosmo, mode='geometry').runtime_info.initialize()
         if is_external_cosmo(self.cosmo):
             # update cosmo_requires with background quantities
             self.cosmo_requires.update(self.apeffect.cosmo_requires)
