@@ -882,6 +882,21 @@ params:
     delta: 0.01
     latex: \Omega_{m}
 
+---
+
+class: BAOExtractor_splitversion
+
+params:
+  Omega_m_dens:
+    prior:
+      limits: [0.01, 1.]
+    ref:
+      dist: norm
+      loc: 0.3153
+      scale: 0.0073
+    delta: 0.01
+    latex: \Omega_{m,\mathrm{dens}}
+
 
 ---
 
