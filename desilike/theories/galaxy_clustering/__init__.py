@@ -17,4 +17,4 @@ from .primordial_non_gaussianity import PNGTracerPowerSpectrumMultipoles
 from .power_template import (FixedPowerSpectrumTemplate, DirectPowerSpectrumTemplate,
                              BaryonSignalSplitPowerSpectrumTemplate, DirectEDEPowerSpectrumTemplate,
                              BAOPowerSpectrumTemplate, BAOPhaseShiftPowerSpectrumTemplate, StandardPowerSpectrumTemplate, ShapeFitPowerSpectrumTemplate, WiggleSplitPowerSpectrumTemplate, BandVelocityPowerSpectrumTemplate, TurnOverPowerSpectrumTemplate, DirectWiggleSplitPowerSpectrumTemplate,
-                             BAOExtractor, BAOPhaseShiftExtractor, StandardPowerSpectrumExtractor, ShapeFitPowerSpectrumExtractor, WiggleSplitPowerSpectrumExtractor, BandVelocityPowerSpectrumExtractor, TurnOverPowerSpectrumExtractor, BandVelocityPowerSpectrumCalculator)
+                             BAOExtractor, BAOExtractor_splitversion, BAOPhaseShiftExtractor, StandardPowerSpectrumExtractor, ShapeFitPowerSpectrumExtractor, WiggleSplitPowerSpectrumExtractor, BandVelocityPowerSpectrumExtractor, TurnOverPowerSpectrumExtractor, BandVelocityPowerSpectrumCalculator)
