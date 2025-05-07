@@ -334,6 +334,84 @@ class BAOExtractor(BasePowerSpectrumExtractor):
             self.qap = self.DH_over_DM / self.DH_over_DM_fid
         return self
 
+class BAOExtractor_splitversion(BasePowerSpectrumExtractor):
+    """
+    Extract BAO parameters from base cosmological parameters.
+
+    Parameters
+    ----------
+    z : float, default=1.
+        Effective redshift.
+
+    eta : float, default=1./3.
+        Relation between 'qpar', 'qper' and 'qiso', 'qap' parameters:
+        ``qiso = qpar ** eta * qper ** (1 - eta)``.
+
+    cosmo : BasePrimordialCosmology, default=None
+        Cosmology calculator. Defaults to ``Cosmoprimo(fiducial=fiducial)``.
+
+    fiducial : str, tuple, dict, cosmoprimo.Cosmology, default='DESI'
+        Specifications for fiducial cosmology. Either:
+
+        - str: name of fiducial cosmology in :class:`cosmoprimo.fiucial`
+        - tuple: (name of fiducial cosmology, dictionary of parameters to update)
+        - dict: dictionary of parameters
+        - :class:`cosmoprimo.Cosmology`: Cosmology instance
+
+    """
+    config_fn = 'power_template.yaml'
+    conflicts = [('DM_over_rd', 'qper'), ('DH_over_rd', 'qper'), ('DM_over_DH', 'qap'), ('DV_over_rd', 'qiso')]
+
+    @staticmethod
+    def _params(params, rs_drag_varied=False):
+        if rs_drag_varied:
+            params['rs_drag'] = dict(value=100., prior=dict(limits=[10., 1000.]), ref=dict(dist='norm', loc=100., scale=10.), latex=r'r_\mathrm{d}')
+        return params
+
+    def initialize(self, z=1., eta=1. / 3., cosmo=None, fiducial='DESI', rs_drag_varied=False):
+        self.z = np.asarray(z, dtype='f8')
+        self.eta = float(eta)
+        self.fiducial = get_cosmo(fiducial)
+        self.cosmo_requires = {}
+        self.cosmo = cosmo
+        params = self.init.params.select(derived=True) + self.init.params.select(basename=['rs_drag']) + self.init.params.select(basename=['Omega_m_dens'])
+        if is_external_cosmo(self.cosmo):
+            self.cosmo_requires['background'] = {'efunc': {'z': self.z}, 'comoving_angular_distance': {'z': self.z}}
+            self.cosmo_requires['thermodynamics'] = {'rs_drag': None}
+        elif cosmo is None:
+            self.cosmo = Cosmoprimo(fiducial=self.fiducial)
+            self.cosmo.init.params = [param for param in self.params if param not in params ]
+        self.init.params = params
+
+        if self.fiducial is not None:
+            self._set_base(fiducial=True)
+
+    def calculate(self, rs_drag=None, Omega_m_dens=None):
+        self._set_base(rs_drag=rs_drag)
+        if Omega_m_dens is not None:
+            self.cosmo['Omega_m'] = Omega_m_dens
+
+    def _set_base(self, fiducial=False, rs_drag=None):
+        cosmo = self.fiducial if fiducial else self.cosmo
+        state = {}
+        state['rd'] = cosmo.rs_drag if rs_drag is None else rs_drag
+        state['DH'] = (constants.c / 1e3) / (100. * cosmo.efunc(self.z))
+        state['DM'] = cosmo.comoving_angular_distance(self.z)
+        state['DV'] = state['DH']**self.eta * state['DM']**(1. - self.eta) * self.z**(1. / 3.)
+        state['DH_over_rd'] = state['DH'] / state['rd']
+        state['DM_over_rd'] = state['DM'] / state['rd']
+        state['DH_over_DM'] = state['DH'] / state['DM']
+        state['DV_over_rd'] = state['DV'] / state['rd']
+        for name, value in state.items(): setattr(self, name + ('_fid' if fiducial else ''), value)
+
+    def get(self):
+        if self.fiducial is not None:
+            self.qpar = self.DH_over_rd / self.DH_over_rd_fid
+            self.qper = self.DM_over_rd / self.DM_over_rd_fid
+            self.qiso = self.DV_over_rd / self.DV_over_rd_fid
+            self.qap = self.DH_over_DM / self.DH_over_DM_fid
+        return self
+
 #from desilike.jax import register_pytree_node_class
 
 #@register_pytree_node_class
