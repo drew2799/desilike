@@ -903,7 +903,7 @@ params:
     ref:
       dist: norm
       loc: 0.3153
-      scale: 0.0073
+      scale: 0.05
     delta: 0.01
     latex: \Omega_{m,\mathrm{dens}}
 
