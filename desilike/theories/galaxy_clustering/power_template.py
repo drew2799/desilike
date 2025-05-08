@@ -1588,7 +1588,7 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         self.cosmo = cosmo
         
         # keep only derived parameters and gamma_b, others are transferred to Cosmoprimo
-        params = self.init.params.select(derived=True) + self.init.params.select(basename=['gamma_b'])
+        params = self.init.params.select(derived=True) + self.init.params.select(basename=['omega_b_dens', 'Omega_m_dens', 'h_dens'])
         if is_external_cosmo(self.cosmo):
             # cosmo_requires only used for external bindings (cobaya, cosmosis, montepython): specifies the input theory requirements
             self.cosmo_requires = {'fourier': {'sigma8_z': {'z': self.z, 'of': [('delta_cb', 'delta_cb'), ('theta_cb', 'theta_cb')]},
@@ -1638,10 +1638,12 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         init_Pk = self.primord_Pk * self.kh * cosmo['h'] * 2*np.pi**2
         self.Pk = init_Pk[:, np.newaxis] * (self.recon_Tm)**2
 
-    def calculate(self, gamma_b=0.15712579897450307): # 0.15641810563851186 if neutrinos present
+    def calculate(self, omega_b_dens=0.02237, Omega_m_dens=0.3137721026737606, h_dens=0.6736): # gamma_b=0.15712579897450307 # 0.15641810563851186 if neutrinos present
         # Compute the power spectrum for the current cosmo
         BasePowerSpectrumExtractor._set_base(self, with_now=self.with_now)
         # Computing the transfer calculation for barion-cdm signals splitting
+        gamma_b = omega_b_dens/(Omega_m_dens*(h_dens**2))
+        
         if not (0 <= gamma_b <= 1):
             raise ValueError(f"The growth baryon fraction parameter gamma_b must be in [0, 1], but you gave {gamma_b}")
             

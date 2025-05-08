@@ -745,16 +745,45 @@ params:
 class: BaryonSignalSplitPowerSpectrumTemplate
 
 params:
-  gamma_b:
-    value: 0.15712579897450307 # 0.15641810563851186 if neutrinos present
+  omega_b_dens:
     prior:
-      limits: [0.05, 0.3]
+      dist: norm
+      loc: 0.02237
+      scale: 0.00037
     ref:
       dist: norm
-      loc: 0.157
-      scale: 0.04
-    delta: 0.01
-    latex: \gamma_{b}
+      loc: 0.02237
+      scale: 0.00015
+    delta: 0.0015
+    latex: \omega_{b,\mathrm{dens}}
+  Omega_m_dens:
+    prior:
+      limits: [0.01, 1.]
+    ref:
+      dist: norm
+      loc: 0.3153
+      scale: 0.0073
+    delta: 0.02
+    latex: \Omega_{m,\mathrm{dens}}
+  h_dens:
+    prior:
+      limits: [0.1, 1.]
+    ref:
+      dist: norm
+      loc: 0.6736
+      scale: 0.005
+    delta: 0.03
+    latex: h_\mathrm{dens}
+  #gamma_b:
+  #  value: 0.15712579897450307 # 0.15641810563851186 if neutrinos present
+  #  prior:
+  #    limits: [0.05, 0.3]
+  #  ref:
+  #    dist: norm
+  #    loc: 0.157
+  #    scale: 0.04
+  #  delta: 0.01
+  #  latex: \gamma_{b}
 
   # Using Planck priors
   h:
