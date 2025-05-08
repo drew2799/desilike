@@ -3,7 +3,7 @@ from desilike.jax import numpy as jnp
 from desilike.parameter import Parameter
 from desilike.base import BaseCalculator
 from desilike.samples import load_source
-from desilike.theories.galaxy_clustering.power_template import BAOExtractor, BAOPhaseShiftExtractor, StandardPowerSpectrumExtractor, ShapeFitPowerSpectrumExtractor, WiggleSplitPowerSpectrumExtractor, BandVelocityPowerSpectrumExtractor, TurnOverPowerSpectrumExtractor
+from desilike.theories.galaxy_clustering.power_template import BAOExtractor, BAOExtractor_splitversion, BAOPhaseShiftExtractor, StandardPowerSpectrumExtractor, ShapeFitPowerSpectrumExtractor, WiggleSplitPowerSpectrumExtractor, BandVelocityPowerSpectrumExtractor, TurnOverPowerSpectrumExtractor
 
 
 def get_quantities(conflict_names):
@@ -118,6 +118,9 @@ class BAOCompressionObservable(BaseCompressionObservable):
     def initialize(self, *args, **kwargs):
         super(BAOCompressionObservable, self).initialize(*args, extractor=BAOExtractor(), **kwargs)
 
+class myBAOCompressionObservable(BaseCompressionObservable):
+    def initialize(self, *args, **kwargs):
+        super(myBAOCompressionObservable, self).initialize(*args, extractor=BAOExtractor_splitversion(), **kwargs)
 
 class BAOPhaseShiftCompressionObservable(BaseCompressionObservable):
     """
