@@ -389,7 +389,7 @@ class BAOExtractor_splitversion(BasePowerSpectrumExtractor):
 
     def calculate(self, rs_drag=None, Omega_m_dens=None):
         if Omega_m_dens is not None:
-            cosmo.init.update(Omega_m=Omega_m_dens)
+            self.cosmo.init.update(Omega_m=Omega_m_dens)
             #cosmo()
         self._set_base(rs_drag=rs_drag)
 
