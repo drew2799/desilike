@@ -381,7 +381,7 @@ class BAOExtractor_splitversion(BasePowerSpectrumExtractor):
             self.cosmo = cosmo
         self.eta = float(eta)
         self.cosmo_requires = {}
-        params = self.init.params.select(derived=True) + self.init.params.select(basename=['rs_drag']) + self.template.init.params.select(basename=['Omega_m_dens'])
+        params = self.init.params.select(derived=True) + self.init.params.select(basename=['rs_drag']) + self.init.params.select(basename=['Omega_m_dens'])
         if is_external_cosmo(self.cosmo):
             self.cosmo_requires['background'] = {'efunc': {'z': self.z}, 'comoving_angular_distance': {'z': self.z}}
             self.cosmo_requires['thermodynamics'] = {'rs_drag': None}
