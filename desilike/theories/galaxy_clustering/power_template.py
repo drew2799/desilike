@@ -366,7 +366,7 @@ class BAOExtractor_splitversion(BasePowerSpectrumExtractor):
     def _params(params, rs_drag_varied=False):
         if rs_drag_varied:
             params['rs_drag'] = dict(value=100., prior=dict(limits=[10., 1000.]), ref=dict(dist='norm', loc=100., scale=10.), latex=r'r_\mathrm{d}')
-        params['Omega_m_dens'] = dict(value=0.3153, prior=dict(limits=[0.01, 1.]), ref=dict(dist='norm', loc=0.3153, scale=0.0073), latex=r'\Omega_{m,\mathrm{dens}}')
+        #params['Omega_m_dens'] = dict(value=0.3153, prior=dict(limits=[0.01, 1.]), ref=dict(dist='norm', loc=0.3153, scale=0.0073), latex=r'\Omega_{m,\mathrm{dens}}')
         return params
 
     def initialize(self, z=1., eta=1. / 3., template=None, cosmo=None, fiducial='DESI', rs_drag_varied=False):
@@ -381,7 +381,7 @@ class BAOExtractor_splitversion(BasePowerSpectrumExtractor):
             self.cosmo = cosmo
         self.eta = float(eta)
         self.cosmo_requires = {}
-        params = self.init.params.select(derived=True) + self.init.params.select(basename=['rs_drag']) + self.init.params.select(basename=['Omega_m_dens'])
+        params = self.init.params.select(derived=True) + self.init.params.select(basename=['rs_drag']) #+ self.init.params.select(basename=['Omega_m_dens'])
         if is_external_cosmo(self.cosmo):
             self.cosmo_requires['background'] = {'efunc': {'z': self.z}, 'comoving_angular_distance': {'z': self.z}}
             self.cosmo_requires['thermodynamics'] = {'rs_drag': None}

@@ -929,15 +929,15 @@ params:
     delta: 0.01
     latex: \Omega_{m}
 
-  Omega_m_dens:
-    prior:
-      limits: [0.01, 1.]
-    ref:
-      dist: norm
-      loc: 0.3153
-      scale: 0.05
-    delta: 0.01
-    latex: \Omega_{m,\mathrm{dens}}
+  #Omega_m_dens:
+  #  prior:
+  #    limits: [0.01, 1.]
+  #  ref:
+  #    dist: norm
+  #    loc: 0.3153
+  #    scale: 0.05
+  #  delta: 0.01
+  #  latex: \Omega_{m,\mathrm{dens}}
 
 
 ---
