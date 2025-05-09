@@ -303,7 +303,7 @@ class BAOExtractor(BasePowerSpectrumExtractor):
         if is_external_cosmo(self.cosmo):
             self.cosmo_requires['background'] = {'efunc': {'z': self.z}, 'comoving_angular_distance': {'z': self.z}}
             self.cosmo_requires['thermodynamics'] = {'rs_drag': None}
-        elif cosmo is None:
+        elif self.cosmo is None:
             self.cosmo = Cosmoprimo(fiducial=self.fiducial)
             self.cosmo.init.params = [param for param in self.params if param not in params]
         self.init.params = params
@@ -369,17 +369,23 @@ class BAOExtractor_splitversion(BasePowerSpectrumExtractor):
         params['Omega_m_dens'] = dict(value=0.3153, prior=dict(limits=[0.01, 1.]), ref=dict(dist='norm', loc=0.3153, scale=0.0073), latex=r'\Omega_{m,\mathrm{dens}}')
         return params
 
-    def initialize(self, z=1., eta=1. / 3., cosmo=None, fiducial='DESI', rs_drag_varied=False):
-        self.z = np.asarray(z, dtype='f8')
+    def initialize(self, z=1., eta=1. / 3., template=None, cosmo=None, fiducial='DESI', rs_drag_varied=False):
+        self.template = template
+        if template is not None:
+            self.z = np.asarray(self.template.z, dtype='f8')
+            self.fiducial = self.template.fiducial
+            self.cosmo = self.template.cosmo
+        else:
+            self.z = np.asarray(z, dtype='f8')
+            self.fiducial = get_cosmo(fiducial)
+            self.cosmo = cosmo
         self.eta = float(eta)
-        self.fiducial = get_cosmo(fiducial)
         self.cosmo_requires = {}
-        self.cosmo = cosmo
-        params = self.init.params.select(derived=True) + self.init.params.select(basename=['rs_drag']) + self.init.params.select(basename=['Omega_m_dens'])
+        params = self.init.params.select(derived=True) + self.init.params.select(basename=['rs_drag']) + self.template.init.params.select(basename=['Omega_m_dens'])
         if is_external_cosmo(self.cosmo):
             self.cosmo_requires['background'] = {'efunc': {'z': self.z}, 'comoving_angular_distance': {'z': self.z}}
             self.cosmo_requires['thermodynamics'] = {'rs_drag': None}
-        elif cosmo is None:
+        if self.cosmo is None:
             self.cosmo = Cosmoprimo(fiducial=self.fiducial)
             self.cosmo.init.params = [param for param in self.params if param not in params ]
         self.init.params = params
@@ -387,10 +393,11 @@ class BAOExtractor_splitversion(BasePowerSpectrumExtractor):
         if self.fiducial is not None:
             self._set_base(fiducial=True)
 
-    def calculate(self, rs_drag=None, Omega_m_dens=None):
+    def calculate(self, rs_drag=None):#, Omega_m_dens=None):
         #if Omega_m_dens is not None:
         #    self.cosmo.init.update(Omega_m=Omega_m_dens)
             #cosmo()
+        Omega_m_dens = self.template.Omega_m_dens
         self._set_base(rs_drag=rs_drag, Omega_m_dens=Omega_m_dens)
 
     def _set_base(self, fiducial=False, rs_drag=None, Omega_m_dens=None):
@@ -1642,15 +1649,18 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         # Compute the power spectrum for the current cosmo
         BasePowerSpectrumExtractor._set_base(self, with_now=self.with_now)
         # Computing the transfer calculation for barion-cdm signals splitting
-        gamma_b = omega_b_dens/(Omega_m_dens*(h_dens**2))
-        
-        if not (0 <= gamma_b <= 1):
-            raise ValueError(f"The growth baryon fraction parameter gamma_b must be in [0, 1], but you gave {gamma_b}")
+        self.omega_b_dens = omega_b_dens
+        self.Omega_m_dens = Omega_m_dens
+        self.h_dens = h_dens
+        self.gamma_b = self.omega_b_dens/(self.Omega_m_dens*(self.h_dens**2))
+
+        if not (0 <= self.gamma_b <= 1):
+            raise ValueError(f"The growth baryon fraction parameter gamma_b must be in [0, 1], but you gave {self.gamma_b}")
             
         if self.split_method=='mod_camb':
             
-            self.modified_CAMB_method(gamma_b)
-            if (gamma_b != 1):
+            self.modified_CAMB_method(self.gamma_b)
+            if (self.gamma_b != 1):
                 self.pk_dd_interpolator = PowerSpectrumInterpolator2D(self.kh, self.cosmo['z_pk'], self.Pk).to_1d(z=self.z)
             else:
                 from interpax import Interpolator2D
@@ -1658,7 +1668,7 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
                 self.pk_dd_interpolator = lambda x: Pk_2D_interp(x, self.z) 
                 
         elif self.split_method=='old':
-            self.compute_old_split(gamma_b)
+            self.compute_old_split(self.gamma_b)
             self.pk_dd_interpolator = PowerSpectrumInterpolator2D(self.kh, self.cosmo['z_pk'], self.Pk).to_1d(z=self.z)
             
         else:
