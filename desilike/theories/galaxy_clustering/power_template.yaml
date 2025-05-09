@@ -746,6 +746,7 @@ class: BaryonSignalSplitPowerSpectrumTemplate
 
 params:
   omega_b_dens:
+    value: 0.02237
     prior:
       dist: norm
       loc: 0.02237
@@ -757,6 +758,7 @@ params:
     delta: 0.0015
     latex: \omega_{b,\mathrm{dens}}
   Omega_m_dens:
+    value: 0.3137721026737606
     prior:
       limits: [0.01, 1.]
     ref:
@@ -766,6 +768,7 @@ params:
     delta: 0.02
     latex: \Omega_{m,\mathrm{dens}}
   h_dens:
+    value: 0.6736
     prior:
       limits: [0.1, 1.]
     ref:
