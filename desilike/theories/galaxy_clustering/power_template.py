@@ -370,15 +370,16 @@ class BAOExtractor_splitversion(BasePowerSpectrumExtractor):
         return params
 
     def initialize(self, z=1., eta=1. / 3., template=None, cosmo=None, fiducial='DESI', rs_drag_varied=False):
+
         self.template = template
         if template is not None:
-            self.z = np.asarray(self.template.z, dtype='f8')
             self.fiducial = self.template.fiducial
             self.cosmo = self.template.cosmo
         else:
-            self.z = np.asarray(z, dtype='f8')
             self.fiducial = get_cosmo(fiducial)
             self.cosmo = cosmo
+
+        self.z = np.asarray(z, dtype='f8')
         self.eta = float(eta)
         self.cosmo_requires = {}
         params = self.init.params.select(derived=True) + self.init.params.select(basename=['rs_drag']) #+ self.init.params.select(basename=['Omega_m_dens'])
@@ -397,16 +398,22 @@ class BAOExtractor_splitversion(BasePowerSpectrumExtractor):
         #if Omega_m_dens is not None:
         #    self.cosmo.init.update(Omega_m=Omega_m_dens)
             #cosmo()
-        Omega_m_dens = self.template.Omega_m_dens
-        self._set_base(rs_drag=rs_drag, Omega_m_dens=Omega_m_dens)
+        if self.template is not None:
+            Omega_m_dens = self.template.Omega_m_dens
+            omega_b_dens = self.template.omega_b_dens
+            h_dens = self.template.h_dens
+        self._set_base(rs_drag=rs_drag, Omega_m_dens=Omega_m_dens, omega_b_dens=omega_b_dens, h_dens=h_dens)
 
-    def _set_base(self, fiducial=False, rs_drag=None, Omega_m_dens=None):
+    def _set_base(self, fiducial=False, rs_drag=None, Omega_m_dens=None, omega_b_dens=None, h_dens=None):
         if Omega_m_dens is None:
             cosmo = self.fiducial if fiducial else self.cosmo
         else:
-            c = self.fiducial if fiducial else self.cosmo
-            c1 = c.init.clone()['fiducial']
-            cosmo = c1.clone(Omega_m=Omega_m_dens)
+            if fiducial:
+                cosmo = self.fiducial
+            else:
+                c =  self.cosmo
+                c1 = c.init.clone()['fiducial']
+                cosmo = c1.clone(Omega_m=Omega_m_dens, omega_b=omega_b_dens, h=h_dens)
         state = {}
         state['rd'] = cosmo.rs_drag if rs_drag is None else rs_drag
         state['DH'] = (constants.c / 1e3) / (100. * cosmo.efunc(self.z))
