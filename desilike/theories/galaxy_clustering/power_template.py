@@ -1505,7 +1505,7 @@ def compute_camb_Tm(cosmo, gamma_b, kh):
 
     zs = cosmo['z_pk']
     camb_k = results.get_matter_transfer_data().transfer_data[0,:,0]
-    camb_Tm = np.flip(results.get_matter_transfer_data().transfer_data[7,:,:], axis=1)
+    camb_Tm = np.flip(results.get_matter_transfer_data().transfer_data[6,:,:], axis=1)
 
     # Total matter transfer function
     k_z_Tm_interp = RectBivariateSpline(camb_k, zs, camb_Tm)
