@@ -140,7 +140,7 @@ class MCLMCSampler(BaseBatchPosteriorSampler):
                 initial_state = blackjax.mcmc.mclmc.init(position=start, logdensity_fn=logdensity_fn, rng_key=key)
                 # build the kernel
                 kernel = lambda sqrt_diag_cov : blackjax.mcmc.mclmc.build_kernel(logdensity_fn=logdensity_fn, inverse_mass_matrix=sqrt_diag_cov, integrator=self.attrs['integrator'])
-                (initial_state, warmup_params) = blackjax.adaptation.mclmc_adaptation.mclmc_find_L_and_step_size(mclmc_kernel=kernel, num_steps=niterations_adaptation, state=initial_state, rng_key=warmup_key, **adaptation)
+                (initial_state, warmup_params, _) = blackjax.adaptation.mclmc_adaptation.mclmc_find_L_and_step_size(mclmc_kernel=kernel, num_steps=niterations_adaptation, state=initial_state, rng_key=warmup_key, **adaptation)
                 start = initial_state.position
                 self.hyp = dict(step_size=warmup_params.step_size, L=warmup_params.L, sqrt_diag_cov=warmup_params.sqrt_diag_cov)
             elif self.hyp is None:
