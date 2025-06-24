@@ -1298,7 +1298,7 @@ class REPTVelocileptorsPowerSpectrumMultipoles(BaseVelocileptorsPowerSpectrumMul
             engine.yshape = keepiz.shape + engine.yshape[1:]
         self.emulator.yoperations.insert(0, Operation("", "{name: v[name][..., iz] * (1 - wz) + v[name][..., iz + 1] * wz if name in ['pktable', 'fsigma8', 'sigma8'] else v[name] for name in v}", locals={'wz': wz, 'iz': iz}))
 
-    def calculate(self):
+    def calculate(self, in_qpar=None, in_qper=None):
         super(REPTVelocileptorsPowerSpectrumMultipoles, self).calculate()
         from velocileptors.EPT.ept_fullresum_varyDz_nu_fftw import REPT
         #from velocileptors.EPT.ept_fullresum_fftw import REPT
@@ -1315,7 +1315,10 @@ class REPTVelocileptorsPowerSpectrumMultipoles(BaseVelocileptorsPowerSpectrumMul
         #if cosmo is not None:
         #    Omega_m, h, fnu, Nnu, Neff = cosmo['Omega_m'], cosmo['h'], cosmo['Omega_ncdm_tot'] / cosmo['Omega_m'], cosmo['N_ncdm'], cosmo['N_eff']
 
-        f0, qpar, qper = map(np.asarray, [self.template.f0, self.template.qpar, self.template.qper])
+        if in_qpar==None:
+            f0, qpar, qper = map(np.asarray, [self.template.f0, self.template.qpar, self.template.qper])
+        else:
+            f0, qpar, qper = map(np.asarray, [self.template.f0, in_qpar, in_qper])
         pcb, pcb_nw, pttcb = [10**interpolate.interp1d(np.log10(self.template.k), np.log10(pk), kind='cubic', fill_value='extrapolate', axis=0, assume_sorted=True)(np.log10(np.append(self.pt.kv, 1.))) for pk in [self.template.pk_dd, self.template.pknow_dd, self.template.pk_dd * self.template.fk**2]]
         fk = np.sqrt(pttcb / pcb)[:-1]
         if self.z.ndim:
