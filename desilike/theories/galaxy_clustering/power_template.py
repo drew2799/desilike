@@ -1592,9 +1592,10 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
 
     
     """
-    def initialize(self, *args, cosmo=None, with_now=False, split_method='new', **kwargs):
+    def initialize(self, *args, cosmo=None, with_now=False, split_method='new', compute_pk_tt=False, **kwargs):
         
         self.split_method = split_method
+        self.compute_pk_tt = compute_pk_tt
         super(BaryonSignalSplitPowerSpectrumTemplate, self).initialize(*args, with_now=with_now, **kwargs)
 
         self.fiducial.set_engine('camb')
@@ -1652,7 +1653,7 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         init_Pk = self.primord_Pk * self.kh * cosmo['h'] * 2*np.pi**2
         self.Pk = init_Pk[:, np.newaxis] * (self.recon_Tm)**2
 
-    def calculate(self, omega_b_dens=0.02237, Omega_m_dens=0.3137721026737606, h_dens=0.6736, compute_pk_tt=False): # gamma_b=0.15712579897450307 # 0.15641810563851186 if neutrinos present
+    def calculate(self, omega_b_dens=0.02237, Omega_m_dens=0.3137721026737606, h_dens=0.6736): # gamma_b=0.15712579897450307 # 0.15641810563851186 if neutrinos present
         # Compute the power spectrum for the current cosmo
         BasePowerSpectrumExtractor._set_base(self, with_now=self.with_now)
         # Computing the transfer calculation for barion-cdm signals splitting
@@ -1683,7 +1684,7 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         
         self.pk_dd = self.pk_dd_interpolator(self.k)
 
-        if compute_pk_tt==True:
+        if self.compute_pk_tt==True:
             res = camb.get_results(template.cosmo.engine._camb_params)
             self.pk_tt_interpolator = res.get_matter_power_interpolator(nonlinear=False, var1='v_newtonian_cdm', var2='v_newtonian_baryon')
             self.pk_tt = self.pk_dd_interpolator(self.k)
