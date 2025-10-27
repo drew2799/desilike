@@ -1507,6 +1507,14 @@ class DirectWiggleSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
 
 c = constants.c
 
+def compute_Pk_tt_interp(cosmo, gamma_b):
+    camb_params = cosmo.engine._camb_params.copy()
+    camb_params.gamma_b = gamma_b
+
+    results = camb.get_results(camb_params)
+    pk_tt_interpolator = results.get_matter_power_interpolator(nonlinear=False, var1='v_newtonian_cdm', var2='v_newtonian_baryon')
+    return pk_tt_interpolator
+    
 def compute_camb_Tm(cosmo, gamma_b, kh):
 
     #cosmo_nonu = cosmo.clone(N_ncdm=0, m_ncdm=[], kmax_pk=10.)
@@ -1685,10 +1693,8 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
         self.pk_dd = self.pk_dd_interpolator(self.k)
 
         if self.compute_pk_tt==True:
-            res = camb.get_results(template.cosmo.engine._camb_params)
-            self.pk_tt_interpolator = res.get_matter_power_interpolator(nonlinear=False, var1='v_newtonian_cdm', var2='v_newtonian_baryon')
+            self.pk_tt_interpolator = compute_Pk_tt_interp(self.cosmo, self.gamma_b)
             self.pk_tt = self.pk_dd_interpolator(self.k)
-        
         
         if self.with_now:
             # Currently not working for 'gamma_b'=1., and in general it has natural difficulties for any 'gamma_b'>0.5
