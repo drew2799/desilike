@@ -1694,7 +1694,7 @@ class BaryonSignalSplitPowerSpectrumTemplate(BasePowerSpectrumTemplate):
 
         if self.compute_pk_tt==True:
             kh, z, pk_tt = compute_Pk_tt(self.cosmo, self.gamma_b)
-            self.pk_tt_interpolator = PowerSpectrumInterpolator2D(kh, z, pk_tt).to_1d(z=self.z)
+            self.pk_tt_interpolator = PowerSpectrumInterpolator2D(kh, z, pk_tt.T).to_1d(z=self.z)
             self.pk_tt = self.pk_tt_interpolator(self.k)
         
         if self.with_now:
